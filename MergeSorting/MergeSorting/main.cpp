@@ -2,24 +2,28 @@
 
 int main() {
     
+    //GENERATING_FILES~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     string originalF = "originalF.txt";
     
-    unsigned long filesize;
-    cout << "Filesize is (megabytes) "; cin >> filesize;
-    cout << endl;
-    
+    long filesize;
+    cout << "Filesize is (megabytes) "; cin >> filesize; cout << endl;
     filesize *= 1000000;
+    long allNums = filesize / 4;
+    int filesQuantity;
     
-    int fileNums = Generating(originalF, filesize);
+    if (allNums % maxNums != 0) {filesQuantity = int(allNums / maxNums) + 1;}
+    else { filesQuantity = int(allNums / maxNums);}
+    
+    Generating(originalF, allNums);
+    
+    //SORTING~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     
     clock_t startTime = clock();
-    for (int i = 1; i <= fileNums; i++)
-    {
-        string filename = to_string(i) + ".txt";
-        SortOneFile(filename);
-    }
     
-    MergeAllFiles(fileNums);
+    MakingFiles(originalF, filesQuantity, filesize);
+        
+    MergeAllFiles(filesQuantity, filesize);
+    
     clock_t endTime = clock();
     cout << "Merge sorting time = " << (endTime - startTime) / CLOCKS_PER_SEC << " seconds" << endl;
     

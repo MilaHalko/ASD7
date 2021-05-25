@@ -1,82 +1,75 @@
 #include "mainFunctions.hpp"
 
-int Generating(string filename, int bitesSize)
+void Generating(string filename, long allNums)
 {
     clock_t startTime = clock();
-    
-    unsigned long size = 0;
-    int fileNum = 1;
-    ofstream fout(filename);
+    ofstream foutText ("OriginalStandart.txt");
+    ofstream fout(filename, ios::binary);
     
     if (!fout)  cout << "Error (" << filename << "- fout)!" << endl;
     else
     {
         srand((time(0)));
-        string filename;
-        
-        while (size <= bitesSize)
-        {
-            int subsize = 0;
-            
-            filename = to_string(fileNum) + ".txt";
-            ofstream foutSmall (filename);
-            
-            while (foutSmall.is_open())
-            {
-                int number = rand() % 1000;
-                fout << number <<  " ";
-                foutSmall << number << endl;
-                
-                size += to_string(number).size() + 1;
-                subsize += to_string(number).size() + 1;
-                
-                if (subsize >= maxSize  ||  size >= bitesSize)
-                {
-                    foutSmall.close();
-                    fileNum++;
-                }
-            }
+        for (int i = 0; i < allNums; i++) {
+            int number = rand() % 1000;
+            fout.write((char*) &(number), 4);
+            foutText << number << " ";
         }
     }
+    foutText.close();
     fout.close();
     
     clock_t endTime = clock();
     cout << "Generating files time = " << ((endTime - startTime) / CLOCKS_PER_SEC) << " seconds"<< endl;
-    
-    cout << "The size (bytes) is " << size << "." << endl;
-    
-    return --fileNum;
 }
+
+
+void MakingFiles (string originalF, int filesQuantity, long fileSize)
+{
+    ifstream finOriginal (originalF, ios::binary);
+    string fileName;
+    long size = maxSize;
+    
+    for (int i = 1; i <= filesQuantity; i++) {
+        fileName = to_string(i) + ".txt";
+        ofstream foutCurrent (fileName, ios::binary);
+        
+        if (i == filesQuantity  &&  fileSize % maxSize)
+            size = fileSize % maxSize;
+        
+        char* buffer = new char [size];
+        buffer[size - 1] = 0;
+        finOriginal.read(buffer, size);
+        foutCurrent.write(buffer, size);
+        foutCurrent.close();
+        delete [] buffer;
+        SortOneFile(fileName);
+    }
+    finOriginal.close();
+}
+
 
 void SortOneFile(string filename)
 {
-    ifstream fin (filename);
+    ifstream fin (filename, ios::binary);
+    vector<int> nums;
+    nums.resize(0);
+    int number;
     
-    if (!fin)  cout << "Error (" << filename << "- fin)!" << endl;
-    else
-    {
-        string str = "1";
-        vector<int> nums;
-        nums.resize(0);
-        
-        while (str != "")
-        {
-            str = "";
-            getline(fin, str);
-            
-            if (str != "")  nums.push_back(stoi(str));
-        }
-        fin.close();
-        
-        MergeSorting(nums, 0, nums.size() - 1);
-        
-        ofstream fout (filename);
-        
-        for (int i = 0; i < nums.size(); i++)
-            fout << nums[i] << endl;
-        
-        nums.clear();
-    }
+    while (fin.read((char*)&number, 4))
+        nums.push_back(number);
+    
+    fin.close();
+    
+    MergeSorting(nums, 0, nums.size() - 1);
+    
+    ofstream fout (filename, ios::binary);
+    
+    for (int i = 0; i < nums.size(); i++)
+        fout.write((char*)&nums[i], 4);
+    
+    fout.close();
+    nums.clear();
 }
 
 
@@ -118,111 +111,106 @@ void MergeSorting(vector<int> &nums, int l, int r)
     subVec.clear();
 }
 
-void MergeAllFiles(int filesNums)
+
+void MergeAllFiles(int filesNums, long filesize)
 {
-    int counter;
-    int gap = 1;
-    do
+    long maxsize = filesize % maxSize;
+    for (int i = filesNums - 1; i > 0; i--)
     {
-        counter = 0;
-        
-        for (int i = 1; i + gap <= filesNums; i += 2 * gap)
-        {
-            counter++;
-            string first = to_string(i) + ".txt";
-            string second = to_string(i + gap) + ".txt";
-            MergeTwoFiles(first, second);
-        }
-        gap *= 2;
-    } while (counter != 0);
-    
-    ofstream fout ("final.txt");
-    ifstream fin ("1.txt");
-    
-    string str = "1";
-    
-    while (str != "")
-    {
-        str = "";
-        getline(fin, str);
-        fout << str << " ";
+        string first = to_string(i) + ".txt";
+        string second = to_string(i + 1) + ".txt";
+        MergeTwoFiles(first, second, maxsize);
+        maxsize = maxSize;
     }
     
-    fout.close();
+    ofstream finalF ("final.txt");
+    ifstream fin ("1.txt", ios::binary);
+    int number;
+    
+    while (fin.read((char*)&number, 4))
+        finalF << number << " ";
+    
     fin.close();
+    finalF.close();
     __fs::filesystem::remove("1.txt");
     
 }
 
 
-void MergeTwoFiles(string firstSTR, string secondSTR)
+void MergeTwoFiles(string firstSTR, string secondSTR, long maxsize)
 {
     string subSTR = "Sub.txt";
 
-    ifstream fin (firstSTR);
-    ifstream fin2 (secondSTR);
-    ofstream sub (subSTR);
+    ifstream fin (firstSTR, ios::binary);
+    ifstream fin2 (secondSTR, ios::binary);
+    ofstream sub (subSTR, ios::binary);
     
     if (!fin  ||  !fin2  ||  !sub)
         cout << "Error!" << endl;
-    
-    string currentFirst;
-    string currentSec;
-    
-    bool newFirst = true;
-    bool newSec = true;
-    
-    while (true)
-    {
-        if (newFirst)
-        {
-            currentFirst = "";
-            getline(fin, currentFirst);
-            newFirst = false;
-        }
-            
-        if (newSec)
-        {
-            currentSec = "";
-            getline(fin2, currentSec);
-            newSec = false;
-        }
+    else {
+        int currentFirst;
+        int currentSec;
         
+        bool newFirst = true;
+        bool newSec = true;
         
-        if (currentFirst == ""  &&  currentSec == "")  break;
-        else
+        bool stopFirst = false;
+        bool stopSec = false;
+        
+        while (true)
         {
-            if (currentFirst != ""  &&  (currentSec == ""  ||  stoi(currentFirst) < stoi(currentSec)))
+            if (newFirst)
             {
-                sub << currentFirst << endl;
-                newFirst = true;
+                if (fin.read((char*)&currentFirst, 4))
+                    newFirst = false;
+                else {
+                    stopFirst = true;
+                    newFirst = false;
+                }
             }
+                
+            if (newSec)
+            {
+                if (fin2.read((char*)&currentSec, 4))
+                    newSec = false;
+                else {
+                    stopSec = true;
+                    newSec = false;
+                }
+            }
+            
+            
+            if (stopFirst  &&  stopSec)
+                break;
             else
             {
-                sub << currentSec << endl;
-                newSec = true;
+                if (!stopFirst  &&  (stopSec  ||  currentFirst < currentSec))
+                {
+                    sub.write((char*)&currentFirst, 4);
+                    newFirst = true;
+                }
+                else
+                {
+                    sub.write((char*)&currentSec, 4);
+                    newSec = true;
+                }
             }
         }
+        
+        fin.close();
+        fin2.close();
+        sub.close();
+        __fs::filesystem::remove(secondSTR);
+        
+        ofstream fout (firstSTR, ios::binary);
+        ifstream sub2 (subSTR,ios::binary);
+        int number;
+        
+        while (sub2.read((char*)&number, 4))
+            fout.write((char*)&number, 4);
+        
+        fout.close();
+        sub2.close();
+        __fs::filesystem::remove(subSTR);
     }
-    
-    fin.close();
-    fin2.close();
-    sub.close();
-    __fs::filesystem::remove(secondSTR);
-    
-    ofstream fout (firstSTR);
-    ifstream sub2 (subSTR);
-    
-    string str = "1";
-    
-    while (str != "")
-    {
-        str = "";
-        getline(sub2, str);
-        fout << str << endl;
-    }
-    
-    fout.close();
-    sub2.close();
-    __fs::filesystem::remove(subSTR);
 }
